@@ -4,6 +4,7 @@
 Simple Inference Script of EfficientDet-Pytorch
 """
 import time
+import argparse
 
 import torch
 from torch.backends import cudnn
@@ -15,7 +16,17 @@ import numpy as np
 from efficientdet.utils import BBoxTransform, ClipBoxes
 from utils.utils import preprocess, invert_affine, postprocess
 
-compound_coef = 0
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-c', '--compound_coef', type=int, default=0, required=True)
+
+args = parser.parse_args()
+
+
+
+
+
+compound_coef = args.c
 force_input_size = 1920  # set None to use default size
 img_path = 'test/img.png'
 
@@ -92,29 +103,29 @@ def display(preds, imgs, imshow=True, imwrite=False):
             cv2.waitKey(0)
 
         if imwrite:
-            cv2.imwrite(f'test/img_inferred_d{compound_coef}_this_repo_{i}.jpg', imgs[i])
+            cv2.imwrite(f'res/img_inferred_d{compound_coef}_this_repo_{i}.jpg', imgs[i])
 
 
 out = invert_affine(framed_metas, out)
 display(out, ori_imgs, imshow=False, imwrite=True)
 
-print('running speed test...')
-with torch.no_grad():
-    print('test1: model inferring and postprocessing')
-    print('inferring image for 10 times...')
-    t1 = time.time()
-    for _ in range(10):
-        _, regression, classification, anchors = model(x)
+# print('running speed test...')
+# with torch.no_grad():
+#     print('test1: model inferring and postprocessing')
+#     print('inferring image for 10 times...')
+#     t1 = time.time()
+#     for _ in range(10):
+#         _, regression, classification, anchors = model(x)
 
-        out = postprocess(x,
-                          anchors, regression, classification,
-                          regressBoxes, clipBoxes,
-                          threshold, iou_threshold)
-        out = invert_affine(framed_metas, out)
+#         out = postprocess(x,
+#                           anchors, regression, classification,
+#                           regressBoxes, clipBoxes,
+#                           threshold, iou_threshold)
+#         out = invert_affine(framed_metas, out)
 
-    t2 = time.time()
-    tact_time = (t2 - t1) / 10
-    print(f'{tact_time} seconds, {1 / tact_time} FPS, @batch_size 1')
+#     t2 = time.time()
+#     tact_time = (t2 - t1) / 10
+#     print(f'{tact_time} seconds, {1 / tact_time} FPS, @batch_size 1')
 
     # uncomment this if you want a extreme fps test
     # print('test2: model inferring only')
