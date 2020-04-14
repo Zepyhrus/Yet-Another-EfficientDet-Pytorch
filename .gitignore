@@ -130,3 +130,6 @@ dmypy.json
 .idea/
 weights/
 *.json
+
+# added by sherk
+res
