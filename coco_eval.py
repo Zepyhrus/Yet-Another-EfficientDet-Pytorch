@@ -50,7 +50,7 @@ obj_list = params['obj_list']
 input_sizes = [512, 640, 768, 896, 1024, 1280, 1280, 1536]
 
 
-def evaluate_coco(img_path, set_name, image_ids, coco, model, threshold=0.05):
+def evaluate_coco(img_path, set_name, image_ids, coco, model, json_file, threshold=0.05):
     results = []
     processed_image_ids = []
 
@@ -119,7 +119,7 @@ def evaluate_coco(img_path, set_name, image_ids, coco, model, threshold=0.05):
         raise Exception('the model does not provide any valid output, check model architecture and the data input')
 
     # write output
-    json.dump(results, open(f'{set_name}_bbox_results.json', 'w'), indent=4)
+    json.dump(results, open(json_file, 'w'), indent=4)
 
     return processed_image_ids
 
@@ -144,8 +144,9 @@ if __name__ == '__main__':
     MAX_IMAGES = 10000
     coco_gt = COCO(VAL_GT)
     image_ids = coco_gt.getImgIds()[:MAX_IMAGES]
+    json_file = f'{SET_NAME}_d{compound_coef}_bbox_results.json'
 
-    if not os.path.exists(f'{SET_NAME}_bbox_results.json'):
+    if not os.path.exists(json_file):
         model = EfficientDetBackbone(compound_coef=compound_coef, num_classes=len(obj_list))
         model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
         model.requires_grad_(False)
@@ -157,8 +158,8 @@ if __name__ == '__main__':
             if use_float16:
                 model.half()
 
-        image_ids = evaluate_coco(VAL_IMGS, SET_NAME, image_ids, coco_gt, model)
+        image_ids = evaluate_coco(VAL_IMGS, SET_NAME, image_ids, coco_gt, model, json_file)
 
-        eval(coco_gt, image_ids, f'{SET_NAME}_bbox_results.json')
+        eval(coco_gt, image_ids, json_file)
     else:
-        eval(coco_gt, image_ids, f'{SET_NAME}_bbox_results.json')
+        eval(coco_gt, image_ids, json_file)
