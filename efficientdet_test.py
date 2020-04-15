@@ -77,10 +77,11 @@ with torch.no_grad():
     regressBoxes = BBoxTransform()
     clipBoxes = ClipBoxes()
 
-    out = postprocess(x,
-                      anchors, regression, classification,
-                      regressBoxes, clipBoxes,
-                      threshold, iou_threshold)
+    out = postprocess(
+        x,
+        anchors, regression, classification,
+        regressBoxes, clipBoxes,
+        threshold, iou_threshold)
 
 
 def display(preds, imgs, imshow=True, imwrite=False):

@@ -1,0 +1,13 @@
+numpy==1.17
+scipy
+matplotlib
+pycocotools
+opencv-python
+tqdm
+google
+protobuf
+tensorboard
+tensorboardX
+pyyaml
+torch==1.4.0
+torchvision==0.5.0
