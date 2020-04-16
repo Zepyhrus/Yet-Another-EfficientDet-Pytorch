@@ -6,5 +6,13 @@
     "**/node_modules/**": true,
     "**/.hg/store/**": true,
     "**/data/**": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/benchmark": true
   }
 }
