@@ -69,17 +69,20 @@ def evaluate_coco(img_path, set_name, image_ids, coco, model, json_file, thresho
             if use_float16:
                 x = x.half()
             else:
-                x = x.float()
+                # x = x.float() this is unecessary, torch using default float32
+                pass
         else:
             x = x.float()
 
         x = x.unsqueeze(0).permute(0, 3, 1, 2)
         features, regression, classification, anchors = model(x)
 
-        preds = postprocess(x,
-                            anchors, regression, classification,
-                            regressBoxes, clipBoxes,
-                            threshold, nms_threshold)
+        preds = postprocess(
+            x,
+            anchors, regression, classification,
+            regressBoxes, clipBoxes,
+            threshold, nms_threshold
+        )
 
         processed_image_ids.append(image_id)
 

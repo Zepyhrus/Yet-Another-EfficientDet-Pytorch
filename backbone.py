@@ -1,5 +1,5 @@
 # Author: Zylo117
-
+from abc import ABC, abstractmethod
 import math
 
 import torch
@@ -80,3 +80,25 @@ class EfficientDetBackbone(nn.Module):
             print(ret)
         except RuntimeError as e:
             print('Ignoring ' + str(e) + '"')
+
+
+
+class BaseDetector(ABC):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def image_preprocess(self, img_name):
+        pass
+
+    @abstractmethod
+    def image_detection(self, imgs, orig_dim_list):
+        pass
+
+    @abstractmethod
+    def detect_one_img(self, img_name):
+        pass
+
+
+
+

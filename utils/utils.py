@@ -30,6 +30,9 @@ def invert_affine(metas: Union[float, list, tuple], preds):
 
 
 def aspectaware_resize_padding(image, width, height, interpolation=None, means=None):
+    """
+    convert original image into fixed, normalized tensor for net input
+    """
     old_h, old_w, c = image.shape
     if old_w > old_h:
         new_w = width
@@ -63,10 +66,14 @@ def aspectaware_resize_padding(image, width, height, interpolation=None, means=N
 
 
 def preprocess(*image_path, max_size=512, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)):
+    # if isinstance(image_path, str):
+    #     image_path = [image_path]
+    # elif not isinstance(image_path, list):
+    #     raise 'images input error!'
+
     ori_imgs = [cv2.imread(img_path) for img_path in image_path]
     normalized_imgs = [(img / 255 - mean) / std for img in ori_imgs]
-    imgs_meta = [aspectaware_resize_padding(img[..., ::-1], max_size, max_size,
-                                            means=None) for img in normalized_imgs]
+    imgs_meta = [aspectaware_resize_padding(img[..., ::-1], max_size, max_size, means=None) for img in normalized_imgs]
     framed_imgs = [img_meta[0] for img_meta in imgs_meta]
     framed_metas = [img_meta[1:] for img_meta in imgs_meta]
 
@@ -111,6 +118,7 @@ def postprocess(x, anchors, regression, classification, regressBoxes, clipBoxes,
     return out
 
 
+
 def display(preds, imgs, obj_list, imshow=True, imwrite=False):
     for i in range(len(imgs)):
         if len(preds[i]['rois']) == 0:
@@ -118,10 +126,13 @@ def display(preds, imgs, obj_list, imshow=True, imwrite=False):
 
         for j in range(len(preds[i]['rois'])):
             (x1, y1, x2, y2) = preds[i]['rois'][j].astype(np.int)
-            cv2.rectangle(imgs[i], (x1, y1), (x2, y2), (255, 255, 0), 2)
+            
             obj = obj_list[preds[i]['class_ids'][j]]
+            if obj != 'person':
+                continue
             score = float(preds[i]['scores'][j])
 
+            cv2.rectangle(imgs[i], (x1, y1), (x2, y2), (255, 255, 0), 2)
             cv2.putText(imgs[i], '{}, {:.3f}'.format(obj, score),
                         (x1, y1 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (255, 255, 0), 1)
