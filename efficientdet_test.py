@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 
 compound_coef = args.c
-force_input_size = 1920  # set None to use default size
+force_input_size = None  # set None to use default size
 img_path = 'test/img.png'
 
 threshold = 0.2
