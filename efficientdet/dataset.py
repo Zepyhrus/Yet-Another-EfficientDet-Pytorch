@@ -9,13 +9,22 @@ import cv2
 
 class CocoDataset(Dataset):
     def __init__(self, root_dir, set='train2017', transform=None):
+        self.cat_ids = [1] # we only condsider human
 
         self.root_dir = root_dir
         self.set_name = set
         self.transform = transform
 
+
         self.coco = COCO(os.path.join(self.root_dir, 'annotations', 'instances_' + self.set_name + '.json'))
-        self.image_ids = self.coco.getImgIds()
+
+        all_image_ids = self.coco.getImgIds()
+        human_image_ids = self.coco.getImgIds(catIds=1)
+        empty_image_ids = all_image_ids
+        for h in human_image_ids:
+            empty_image_ids.remove(h)
+        # we use human with images and 10% images without humans
+        self.image_ids = human_image_ids + empty_image_ids[::10]
 
         self.load_classes()
 
@@ -59,12 +68,15 @@ class CocoDataset(Dataset):
         annotations_ids = self.coco.getAnnIds(imgIds=self.image_ids[image_index], iscrowd=False)
         annotations = np.zeros((0, 5))
 
+        # parse annotations, we only pick annotations contains human and cars
+        coco_annotations = self.coco.loadAnns(annotations_ids)
+        coco_annotations = [_ for _ in coco_annotations if _['category_id'] in self.cat_ids]
+
         # some images appear to miss annotations
-        if len(annotations_ids) == 0:
+        if len(coco_annotations) == 0:
             return annotations
 
-        # parse annotations
-        coco_annotations = self.coco.loadAnns(annotations_ids)
+
         for idx, a in enumerate(coco_annotations):
 
             # some annotations have basically no width / height, skip them
@@ -109,7 +121,7 @@ def collater(data):
 
 class Resizer(object):
     """Convert ndarrays in sample to Tensors."""
-    
+
     def __init__(self, img_size=512):
         self.img_size = img_size
 

@@ -18,7 +18,7 @@ from tensorboardX import SummaryWriter
 import numpy as np
 from tqdm.autonotebook import tqdm
 
-from efficientdet.loss import FocalLoss
+from efficientdet.loss import FocalLoss, FocalBboxLoss
 from utils.sync_batchnorm import patch_replication_callback
 from utils.utils import replace_w_sync_bn, CustomDataParallel, get_last_weights, init_weights
 
@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument('--head_only', type=boolean_string, default=False,
                         help='whether finetunes only the regressor and the classifier, '
                              'useful in early stage convergence or small/easy dataset')
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=1e-3) # changed from 1e-4 to 1e-3
     parser.add_argument('--optim', type=str, default='adamw', help='select optimizer for training, '
                                                                    'suggest using \'admaw\' until the'
                                                                    ' very final stage then switch to \'sgd\'')
@@ -72,7 +72,8 @@ def boolean_string(s):
 class ModelWithLoss(nn.Module):
     def __init__(self, model, debug=False):
         super().__init__()
-        self.criterion = FocalLoss()
+        # self.criterion = FocalLoss()
+        self.criterion = FocalBboxLoss()
         self.model = model
         self.debug = debug
 
@@ -89,7 +90,7 @@ class ModelWithLoss(nn.Module):
 def train(opt):
     params = Params(f'projects/{opt.project}.yml')
 
-    if params.num_gpus == 0:
+    if True: # params.num_gpus == 0:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     if torch.cuda.is_available():
@@ -183,7 +184,7 @@ def train(opt):
     # warp the model with loss function, to reduce the memory usage on gpu0 and speedup
     model = ModelWithLoss(model, debug=opt.debug)
 
-    if params.num_gpus > 0:
+    if False: # params.num_gpus >= 1:
         model = model.cuda()
         if params.num_gpus > 1:
             model = CustomDataParallel(model, params.num_gpus)
@@ -221,7 +222,7 @@ def train(opt):
                     imgs = data['img']
                     annot = data['annot']
 
-                    if params.num_gpus == 1:
+                    if False: # params.num_gpus == 1:
                         # if only one gpu, just send it to cuda:0
                         # elif multiple gpus, send it to multiple gpus in CustomDataParallel, not here
                         imgs = imgs.cuda()
