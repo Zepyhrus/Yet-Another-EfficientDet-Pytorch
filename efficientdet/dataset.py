@@ -1,4 +1,6 @@
 import os
+import random
+
 import torch
 import numpy as np
 
@@ -7,8 +9,14 @@ from pycocotools.coco import COCO
 import cv2
 
 
+from utils.utils import imread
+
+from alphapose.utils.noise import random_blur, random_brightness, random_noise, random_pass, random_hsv
+
 class CocoDataset(Dataset):
-    def __init__(self, root_dir, set='train2017', transform=None):
+    def __init__(self, root_dir, set='train2017', transform=None, train=True, output_size=512):
+        self._output_size = output_size
+        self._train = train
         self.cat_ids = [1] # we only condsider human
 
         self.root_dir = root_dir
@@ -20,11 +28,12 @@ class CocoDataset(Dataset):
 
         all_image_ids = self.coco.getImgIds()
         human_image_ids = self.coco.getImgIds(catIds=1)
-        empty_image_ids = all_image_ids
-        for h in human_image_ids:
-            empty_image_ids.remove(h)
-        # we use human with images and 10% images without humans
-        self.image_ids = human_image_ids + empty_image_ids[::10]
+        # empty_image_ids = all_image_ids
+        # for h in human_image_ids:
+        #     empty_image_ids.remove(h)
+        
+        # TODO: we use human with images and 10% images without humans
+        self.image_ids = human_image_ids # + empty_image_ids[::10]
 
         self.load_classes()
 
@@ -47,21 +56,80 @@ class CocoDataset(Dataset):
         return len(self.image_ids)
 
     def __getitem__(self, idx):
-
-        img = self.load_image(idx)
+        img = self.load_image(idx)  # here img is still a numpy
         annot = self.load_annotations(idx)
-        sample = {'img': img, 'annot': annot}
+        
+        if self._train:
+            # add random augumentation
+            if np.random.randint(2):
+                img = random_brightness(img)
+            
+            if np.random.randint(2):
+                img = random_blur(img)
+
+            if np.random.randint(2):
+                img = random_noise(img)
+
+            img = random_hsv(img)
+
+            # add size augumentation
+            H, W, C = img.shape
+            _drift = self._output_size / 6
+            _half = self._output_size / 2
+            _amplf = 0.8 + np.random.rand()
+            _crop  = 0.5 + np.random.rand()
+
+            # print(_amplf, _crop)
+
+            _drift_x = np.clip(np.random.randn() * _drift, -3*_drift, 3*_drift)
+            _drift_y = np.clip(np.random.randn() * _drift, -3*_drift, 3*_drift)
+
+            # print(_drift_x, _drift_y)
+
+            src = np.array([
+                [0, 0],
+                [0, H],
+                [W, 0]
+            ], dtype=np.float32)
+
+            dst = np.array([
+                [_half + _drift_x - _half*_amplf, _half + _drift_y - _half*H/W*_amplf*_crop],
+                [_half + _drift_x - _half*_amplf, _half + _drift_y + _half*H/W*_amplf*_crop],
+                [_half + _drift_x + _half*_amplf, _half + _drift_y - _half*H/W*_amplf*_crop]
+            ], dtype=np.float32)
+
+            _M = cv2.getAffineTransform(src, dst)
+
+            img = cv2.warpAffine(img, _M, (self._output_size, self._output_size), flags=cv2.INTER_LINEAR)
+
+            # rotate bbox
+            annot[:, :2] = np.concatenate((annot[:, :2], np.ones((annot.shape[0], 1))), axis=1) @ _M.T
+            annot[:, 2:4] = np.concatenate((annot[:, 2:4], np.ones((annot.shape[0], 1))), axis=1) @ _M.T
+
+            annot = np.clip(annot, 0, self._output_size)
+
+            pick = np.logical_and(
+                (annot[:, 2] - annot[:, 0]) >= self._output_size/64,
+                (annot[:, 3] - annot[:, 1]) >= self._output_size/64
+            )
+            
+            annot = np.zeros((0, 5)) if pick.sum() == 0 else annot[pick, :]
+            # print(annot)
+
+
+        sample = {'img': img.astype(np.float32) / 255, 'annot': annot}
+
         if self.transform:
             sample = self.transform(sample)
+    
         return sample
 
     def load_image(self, image_index):
         image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
         path = os.path.join(self.root_dir, self.set_name, image_info['file_name'])
-        img = cv2.imread(path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.imread(path)[:, :, ::-1]
 
-        return img.astype(np.float32) / 255.
+        return img
 
     def load_annotations(self, image_index):
         # get ground truth annotations
@@ -75,7 +143,6 @@ class CocoDataset(Dataset):
         # some images appear to miss annotations
         if len(coco_annotations) == 0:
             return annotations
-
 
         for idx, a in enumerate(coco_annotations):
 
@@ -162,8 +229,8 @@ class Augmenter(object):
 
             x_tmp = x1.copy()
 
-            annots[:, 0] = cols - x2
-            annots[:, 2] = cols - x_tmp
+            annots[:, 0] = cols - x2 - 1
+            annots[:, 2] = cols - x_tmp - 1
 
             sample = {'img': image, 'annot': annots}
 

@@ -8,12 +8,12 @@ from utils.utils import postprocess, invert_affine, display
 
 
 def calc_iou(a, b):
-    # a(anchor) [boxes, (y1, x1, y2, x2)]
+    # a(anchor)         [boxes, (y1, x1, y2, x2)]
     # b(gt, coco-style) [boxes, (x1, y1, x2, y2)]
 
     area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])    # area of b
-    iw = torch.min(torch.unsqueeze(a[:, 3], dim=1), b[:, 3]) - torch.max(torch.unsqueeze(a[:, 1], 1), b[:, 1]) # interesting
-    ih = torch.min(torch.unsqueeze(a[:, 2], dim=1), b[:, 2]) - torch.max(torch.unsqueeze(a[:, 0], 1), b[:, 0]) # ...
+    iw = torch.min(torch.unsqueeze(a[:, 3], dim=1), b[:, 2]) - torch.max(torch.unsqueeze(a[:, 1], 1), b[:, 0]) # interesting
+    ih = torch.min(torch.unsqueeze(a[:, 2], dim=1), b[:, 3]) - torch.max(torch.unsqueeze(a[:, 0], 1), b[:, 1]) # ...
     iw = torch.clamp(iw, min=0)
     ih = torch.clamp(ih, min=0)
     ua = torch.unsqueeze((a[:, 2] - a[:, 0]) * (a[:, 3] - a[:, 1]), dim=1) + area - iw * ih
@@ -24,8 +24,8 @@ def calc_iou(a, b):
     return IoU
 
 def calc_assigned_iou(a, b):
-    # a, preds
-    # b, ground truth
+    # a, preds          [x1, y1, x2, y2]
+    # b, ground truth   [x1, y1, x2, y2]
     assert a.shape == b.shape
 
     bd = torch.zeros_like(a)
@@ -328,10 +328,10 @@ class FocalBboxLoss(nn.Module):
 
                 # ------------------------ bbox focal loss -----------------------
                 preds_reg = regression[positive_indices, :]
-                preds_dx = preds_reg[:, 0]
-                preds_dy = preds_reg[:, 1]
-                preds_dw = preds_reg[:, 2]
-                preds_dh = preds_reg[:, 3]
+                preds_dx = preds_reg[:, 1]
+                preds_dy = preds_reg[:, 0]
+                preds_dw = preds_reg[:, 3]
+                preds_dh = preds_reg[:, 2]
 
                 preds_widths = torch.exp(preds_dw) * anchor_widths_pi
                 preds_heights = torch.exp(preds_dh) * anchor_heights_pi

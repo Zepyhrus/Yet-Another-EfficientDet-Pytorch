@@ -7,6 +7,10 @@ import os
 import argparse
 import traceback
 
+import matplotlib.pyplot as plt
+plt.rcParams['figure.autolayout'] = True
+
+
 import torch
 import yaml
 from torch import nn
@@ -36,7 +40,7 @@ def get_args():
     parser.add_argument('-p', '--project', type=str, default='coco', help='project file that contains parameters')
     parser.add_argument('-c', '--compound_coef', type=int, default=0, help='coefficients of efficientdet')
     parser.add_argument('-n', '--num_workers', type=int, default=12, help='num_workers of dataloader')
-    parser.add_argument('--batch_size', type=int, default=12, help='The number of images per batch among all devices')
+    parser.add_argument('-b', '--batch_size', type=int, default=12, help='The number of images per batch among all devices')
     parser.add_argument('--head_only', type=boolean_string, default=False,
                         help='whether finetunes only the regressor and the classifier, '
                              'useful in early stage convergence or small/easy dataset')
@@ -90,7 +94,7 @@ class ModelWithLoss(nn.Module):
 def train(opt):
     params = Params(f'projects/{opt.project}.yml')
 
-    if True: # params.num_gpus == 0:
+    if params.num_gpus == 0:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     if torch.cuda.is_available():
@@ -116,15 +120,31 @@ def train(opt):
                   'num_workers': opt.num_workers}
 
     input_sizes = [512, 640, 768, 896, 1024, 1280, 1280, 1536]
-    training_set = CocoDataset(root_dir=os.path.join(opt.data_path, params.project_name), set=params.train_set,
-                               transform=transforms.Compose([Normalizer(mean=params.mean, std=params.std),
-                                                             Augmenter(),
-                                                             Resizer(input_sizes[opt.compound_coef])]))
+    training_set = CocoDataset(
+        root_dir=os.path.join(opt.data_path, params.project_name),
+        set=params.train_set,
+        transform=transforms.Compose([
+            Normalizer(mean=params.mean, std=params.std),
+            Augmenter(),
+            Resizer(input_sizes[opt.compound_coef])
+        ]),
+        train=True,
+        output_size=input_sizes[opt.compound_coef]
+    )
+
+
     training_generator = DataLoader(training_set, **training_params)
 
-    val_set = CocoDataset(root_dir=os.path.join(opt.data_path, params.project_name), set=params.val_set,
-                          transform=transforms.Compose([Normalizer(mean=params.mean, std=params.std),
-                                                        Resizer(input_sizes[opt.compound_coef])]))
+    val_set = CocoDataset(
+        root_dir=os.path.join(opt.data_path, params.project_name),
+        set=params.val_set,
+        transform=transforms.Compose([
+            Normalizer(mean=params.mean, std=params.std),
+            Resizer(input_sizes[opt.compound_coef])
+        ]),
+        train=False,
+        output_size=input_sizes[opt.compound_coef]
+    )
     val_generator = DataLoader(val_set, **val_params)
 
     model = EfficientDetBackbone(num_classes=len(params.obj_list), compound_coef=opt.compound_coef,
@@ -184,7 +204,7 @@ def train(opt):
     # warp the model with loss function, to reduce the memory usage on gpu0 and speedup
     model = ModelWithLoss(model, debug=opt.debug)
 
-    if False: # params.num_gpus >= 1:
+    if params.num_gpus >= 1:
         model = model.cuda()
         if params.num_gpus > 1:
             model = CustomDataParallel(model, params.num_gpus)
@@ -222,7 +242,7 @@ def train(opt):
                     imgs = data['img']
                     annot = data['annot']
 
-                    if False: # params.num_gpus == 1:
+                    if params.num_gpus == 1:
                         # if only one gpu, just send it to cuda:0
                         # elif multiple gpus, send it to multiple gpus in CustomDataParallel, not here
                         imgs = imgs.cuda()

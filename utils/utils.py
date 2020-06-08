@@ -11,12 +11,23 @@ from torchvision.ops import nms
 from torchvision.ops.boxes import batched_nms
 from typing import Union
 import uuid
+from turbojpeg import TurboJPEG
 
 from utils.sync_batchnorm import SynchronizedBatchNorm2d
 
 from torch.nn.init import _calculate_fan_in_and_fan_out, _no_grad_normal_
 import math
 import webcolors
+
+
+jpeg = TurboJPEG()
+
+def imread(image):
+  with open(image, 'rb') as _i:
+    _img = jpeg.decode(_i.read())
+  
+  return _img
+
 
 def invert_affine(metas: Union[float, list, tuple], preds):
     for i in range(len(preds)):
