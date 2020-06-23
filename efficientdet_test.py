@@ -97,7 +97,7 @@ if __name__ == "__main__":
     code = 21
     images = sorted(glob(f'data/hie/images/train/{code:02d}*.jpg'))
 
-    size_thresh = 6
+    size_thresh = 12
 
 
     for threshold in [0.1, 0.2, 0.3, 0.4, 0.5]:
@@ -147,7 +147,7 @@ if __name__ == "__main__":
                     for _d, (bbox, score) in enumerate(zip(_bboxes[_p, :], _scores[_p])):
                         x1, y1, x2, y2 = [int(_) for _ in bbox]
                         if x2-x1 < size_thresh or y2-y1 < size_thresh: continue
-                        
+
                         ann = {
                             'image_id': img_id,
                             'bbox': [x1, y1, x2-x1, y2-y1],
