@@ -52,7 +52,6 @@ if __name__ == "__main__":
     # replace this part with your project's anchor config
     anchor_ratios = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
     anchor_scales = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
-
     
 
     use_cuda = True
@@ -60,21 +59,21 @@ if __name__ == "__main__":
     cudnn.fastest = True
     cudnn.benchmark = True
 
-    obj_list = [
-        'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
-        'fire hydrant', '', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
-        'cow', 'elephant', 'bear', 'zebra', 'giraffe', '', 'backpack', 'umbrella', '', '', 'handbag', 'tie',
-        'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
-        'skateboard', 'surfboard', 'tennis racket', 'bottle', '', 'wine glass', 'cup', 'fork', 'knife', 'spoon',
-        'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut',
-        'cake', 'chair', 'couch', 'potted plant', 'bed', '', 'dining table', '', '', 'toilet', '', 'tv',
-        'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
-        'refrigerator', '', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-    ]
-    weight = f'weights/efficientdet-d{compound_coef}.pth'
+    # obj_list = [
+    #     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+    #     'fire hydrant', '', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
+    #     'cow', 'elephant', 'bear', 'zebra', 'giraffe', '', 'backpack', 'umbrella', '', '', 'handbag', 'tie',
+    #     'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
+    #     'skateboard', 'surfboard', 'tennis racket', 'bottle', '', 'wine glass', 'cup', 'fork', 'knife', 'spoon',
+    #     'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut',
+    #     'cake', 'chair', 'couch', 'potted plant', 'bed', '', 'dining table', '', '', 'toilet', '', 'tv',
+    #     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
+    #     'refrigerator', '', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    # ]
+    # weight = f'weights/efficientdet-d{compound_coef}.pth'
     
-    # obj_list= ['person']
-    # weight = f'weights/efficientdet-d0_21_339798.pth'
+    obj_list= ['person']
+    weight = f'weights/efficientdet-d0_9_9500.pth'
 
     color_list = standard_to_bgr(STANDARD_COLORS)
     # tf bilinear interpolation is different from any other's, just make do
@@ -97,8 +96,7 @@ if __name__ == "__main__":
     code = 21
     images = sorted(glob(f'data/hie/images/train/{code:02d}*.jpg'))
 
-    size_thresh = 12
-
+    size_thresh = 12    # TODO: why set size_thresh to be 12?
 
     for threshold in [0.1, 0.2, 0.3, 0.4, 0.5]:
         for iou_threshold in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
@@ -120,10 +118,10 @@ if __name__ == "__main__":
                     regressBoxes = BBoxTransform()
                     clipBoxes = ClipBoxes()
 
-                    out = postprocess(x,
-                                    anchors, regression, classification,
-                                    regressBoxes, clipBoxes,
-                                    threshold, iou_threshold)
+                    out = postprocess(
+                        x, anchors, regression, classification,
+                        regressBoxes, clipBoxes, threshold, iou_threshold
+                    )
 
 
                 out = invert_affine(framed_metas, out)
