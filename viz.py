@@ -1,13 +1,14 @@
 
 from glob import glob
 
+from hie.hie import HIE
+
+
 
 if __name__ == "__main__":
-  images = glob('data/coco/train2017/*')
+  dt = HIE('det/origin-d0-iou-0.4-thersh-0.3.json')
 
-  print(len(images))
-
-  print([_ for _ in images if not _.endswith('.jpg')])
+  dt.viz(show_bbox=True)
 
 
 

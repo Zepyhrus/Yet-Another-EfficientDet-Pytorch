@@ -24,6 +24,10 @@ from efficientdet.utils import BBoxTransform, ClipBoxes
 from utils.utils import preprocess, invert_affine, postprocess, STANDARD_COLORS, standard_to_bgr, get_index_label, plot_one_box
 
 
+from hie.hie import HIE
+from hie.hieval import HIEval
+from hie.tools import jsdump
+
 def display(preds, imgs, imshow=True, imwrite=False):
     for i in range(len(imgs)):
         if len(preds[i]['rois']) == 0:
@@ -59,21 +63,21 @@ if __name__ == "__main__":
     cudnn.fastest = True
     cudnn.benchmark = True
 
-    # obj_list = [
-    #     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
-    #     'fire hydrant', '', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
-    #     'cow', 'elephant', 'bear', 'zebra', 'giraffe', '', 'backpack', 'umbrella', '', '', 'handbag', 'tie',
-    #     'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
-    #     'skateboard', 'surfboard', 'tennis racket', 'bottle', '', 'wine glass', 'cup', 'fork', 'knife', 'spoon',
-    #     'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut',
-    #     'cake', 'chair', 'couch', 'potted plant', 'bed', '', 'dining table', '', '', 'toilet', '', 'tv',
-    #     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
-    #     'refrigerator', '', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-    # ]
-    # weight = f'weights/efficientdet-d{compound_coef}.pth'
+    obj_list = [
+        'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+        'fire hydrant', '', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
+        'cow', 'elephant', 'bear', 'zebra', 'giraffe', '', 'backpack', 'umbrella', '', '', 'handbag', 'tie',
+        'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
+        'skateboard', 'surfboard', 'tennis racket', 'bottle', '', 'wine glass', 'cup', 'fork', 'knife', 'spoon',
+        'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut',
+        'cake', 'chair', 'couch', 'potted plant', 'bed', '', 'dining table', '', '', 'toilet', '', 'tv',
+        'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
+        'refrigerator', '', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    ]
+    weight = f'weights/efficientdet-d{compound_coef}.pth'
     
-    obj_list= ['person']
-    weight = f'weights/efficientdet-d0_9_9500.pth'
+    # obj_list= ['person']
+    # weight = f'weights/efficientdet-d0_9_9500.pth'
 
     color_list = standard_to_bgr(STANDARD_COLORS)
     # tf bilinear interpolation is different from any other's, just make do
@@ -93,10 +97,11 @@ if __name__ == "__main__":
         model = model.half()
 
     
-    code = 21
-    images = sorted(glob(f'data/hie/images/train/{code:02d}*.jpg'))
+    gt = HIE('data/seed/labels/val.json', 'seed')
+    img_ids = gt.getImgIds()
+    images = [gt._get_abs_name(_) for _ in img_ids]
 
-    size_thresh = 12    # TODO: why set size_thresh to be 12?
+    size_thresh = 6    # TODO: why set size_thresh to be 12?, decreased to 6
 
     for threshold in [0.1, 0.2, 0.3, 0.4, 0.5]:
         for iou_threshold in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
@@ -134,7 +139,7 @@ if __name__ == "__main__":
                     _bboxes = out[i]['rois']
                     _scores = out[i]['scores']
 
-                    _p = _objs == 0
+                    _p = _objs == 0 # we only consider human
 
                     if not len(_p): continue
 
@@ -150,8 +155,6 @@ if __name__ == "__main__":
                             'image_id': img_id,
                             'bbox': [x1, y1, x2-x1, y2-y1],
                             'category_id': 1,
-                            'track': _d,
-                            'name': f'{code:02d}-{_d}',
                             'id': ann_id,
                             'score': float(score)
                         }
@@ -160,8 +163,20 @@ if __name__ == "__main__":
                 
                 # display(out, ori_imgs, imshow=True, imwrite=False)
                 # if cv2.waitKey(0) == 27: break
+            
+            dt = gt.load_res(all_anns)
 
-            json.dump(all_anns, open(f'det/d{compound_coef}-{code}-iou-{iou_threshold}-thersh-{threshold}.res.json', 'w'))
+            res_file = f'det/seed-d{compound_coef}-iou-{iou_threshold}-thersh-{threshold}.json'
+            jsdump(dt.dataset, res_file)
+
+            hie_eval = HIEval(gt, dt, 'bbox')
+            msg, _ = hie_eval.new_summ()
+
+            with open(f'det/seed-d{compound_coef}.txt', 'a') as f:
+                f.write(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
+                print(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
+
+
 
     # print('running speed test...')
     # with torch.no_grad():
