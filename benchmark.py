@@ -52,6 +52,7 @@ if __name__ == "__main__":
     compound_coef = 0
     force_input_size = None  # set None to use default size
     img_path = 'test/img.png'
+    project = 'full'
 
     # replace this part with your project's anchor config
     anchor_ratios = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
@@ -103,8 +104,8 @@ if __name__ == "__main__":
 
     size_thresh = 6    # TODO: why set size_thresh to be 12?, decreased to 6
 
-    for threshold in [0.1, 0.2, 0.3, 0.4, 0.5]:
-        for iou_threshold in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
+    for threshold in [.02, .05]:
+        for iou_threshold in [.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
             all_anns = []
             ann_id = 0
             for image in tqdm(images):
@@ -166,17 +167,14 @@ if __name__ == "__main__":
             
             dt = gt.load_res(all_anns)
 
-            res_file = f'det/seed-d{compound_coef}-iou-{iou_threshold}-thersh-{threshold}.json'
-            jsdump(dt.dataset, res_file)
+            res_file = f'det/{project}-d{compound_coef}-iou-{iou_threshold}-thersh-{threshold}.json'
 
             hie_eval = HIEval(gt, dt, 'bbox')
             msg, _ = hie_eval.new_summ()
 
-            with open(f'det/seed-d{compound_coef}.txt', 'a') as f:
+            with open(f'det/{project}-d{compound_coef}.txt', 'a') as f:
                 f.write(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
                 print(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
-
-
 
     # print('running speed test...')
     # with torch.no_grad():
