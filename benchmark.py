@@ -108,7 +108,7 @@ if __name__ == "__main__":
         for iou_threshold in [.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
             all_anns = []
             ann_id = 0
-            for image in tqdm(images):
+            for image in tqdm(images, dynamic_ncols=True):
                 # preprocess image
                 ori_imgs, framed_imgs, framed_metas = preprocess(image, max_size=input_size)
                 # x is stacked as a batch here
