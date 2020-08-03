@@ -98,17 +98,19 @@ if __name__ == "__main__":
         model = model.half()
 
     
-    gt = HIE('data/seed/labels/val.json', 'seed')
-    img_ids = gt.getImgIds()
-    images = [gt._get_abs_name(_) for _ in img_ids]
+    # gt = HIE('data/seed/labels/val.json', 'seed')
+    # img_ids = gt.getImgIds()
+    # images = [gt._get_abs_name(_) for _ in img_ids]
+    images = ['1035-1.png', '1035-2.png']
 
     size_thresh = 6    # TODO: why set size_thresh to be 12?, decreased to 6
 
-    for threshold in [.02, .05]:
-        for iou_threshold in [.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
+    for threshold in [.1, .2, .3, .4]:
+        for iou_threshold in [0.5, 0.6, 0.7]:
             all_anns = []
             ann_id = 0
             for image in tqdm(images, dynamic_ncols=True):
+                img = cv2.imread(image)
                 # preprocess image
                 ori_imgs, framed_imgs, framed_metas = preprocess(image, max_size=input_size)
                 # x is stacked as a batch here
@@ -160,21 +162,25 @@ if __name__ == "__main__":
                             'score': float(score)
                         }
                         anns.append(ann)
-                all_anns += anns
-                
+
+                        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # all_anns += anns
+                cv2.imshow('_', img)
+                print(threshold, ', ', iou_threshold)
+
                 # display(out, ori_imgs, imshow=True, imwrite=False)
-                # if cv2.waitKey(0) == 27: break
+                if cv2.waitKey(0) == 27: break
             
-            dt = gt.load_res(all_anns)
+            # dt = gt.load_res(all_anns)
 
-            res_file = f'det/{project}-d{compound_coef}-iou-{iou_threshold}-thersh-{threshold}.json'
+            # res_file = f'det/{project}-d{compound_coef}-iou-{iou_threshold}-thersh-{threshold}.json'
 
-            hie_eval = HIEval(gt, dt, 'bbox')
-            msg, _ = hie_eval.new_summ()
+            # hie_eval = HIEval(gt, dt, 'bbox')
+            # msg, _ = hie_eval.new_summ()
 
-            with open(f'det/{project}-d{compound_coef}.txt', 'a') as f:
-                f.write(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
-                print(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
+            # with open(f'det/{project}-d{compound_coef}.txt', 'a') as f:
+            #     f.write(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
+            #     print(f'iou-{iou_threshold}-thersh-{threshold}: {msg}\n')
 
     # print('running speed test...')
     # with torch.no_grad():
